@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Vision Guard{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-bg: #0f172a;
+            --secondary-bg: #1e293b;
+            --accent-color: #38bdf8;
+            --text-main: #f8fafc;
+        }
+        body {
+            background-color: var(--primary-bg);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+        }
+        .navbar {
+            background-color: var(--secondary-bg) !important;
+            border-bottom: 1px solid #334155;
+        }
+        .sidebar {
+            background-color: var(--secondary-bg);
+            min-height: calc(100vh - 56px);
+            border-right: 1px solid #334155;
+        }
+        .card {
+            background-color: var(--secondary-bg);
+            border: 1px solid #334155;
+            color: var(--text-main);
+        }
+        .nav-link {
+            color: #94a3b8;
+        }
+        .nav-link.active {
+            color: var(--accent-color) !important;
+        }
+        .nav-link:hover {
+            color: var(--text-main);
+        }
+        .btn-primary {
+            background-color: var(--accent-color);
+            border: none;
+        }
+        .risk-high { color: #ef4444; }
+        .risk-medium { color: #f59e0b; }
+        .risk-low { color: #10b981; }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="{% url 'index' %}">
+                <i class="bi bi-shield-check text-info"></i> Vision Guard
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    {% if user.is_authenticated %}
+                        <li class="nav-item">
+                            <span class="nav-link text-light">Welcome, {{ user.username }}</span>
+                        </li>
+                        <li class="nav-item">
+                            <form action="{% url 'logout' %}" method="post" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-link nav-link">Logout</button>
+                            </form>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'login' %}">Login</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            {% if user.is_authenticated %}
+            <nav class="col-md-2 d-none d-md-block sidebar py-3">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'index' %}active{% endif %}" href="{% url 'index' %}">
+                            <i class="bi bi-speedometer2 me-2"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'monitor' in request.path %}active{% endif %}" href="{% url 'monitor' %}">
+                            <i class="bi bi-camera-video me-2"></i> Live Monitor
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'camera' in request.path %}active{% endif %}" href="{% url 'camera_list' %}">
+                            <i class="bi bi-gear me-2"></i> Camera Settings
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'incident' in request.path %}active{% endif %}" href="{% url 'incident_list' %}">
+                            <i class="bi bi-exclamation-triangle me-2"></i> Incidents
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'detection' in request.path %}active{% endif %}" href="{% url 'detection_list' %}">
+                            <i class="bi bi-list-ul me-2"></i> All Detections
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'map' in request.path %}active{% endif %}" href="{% url 'map' %}">
+                            <i class="bi bi-map me-2"></i> Estate Map
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            <main class="col-md-10 ms-sm-auto col-lg-10 px-md-4 py-4">
+                {% block content %}{% endblock %}
+            </main>
+            {% else %}
+            <main class="col-12 px-md-4 py-4">
+                {% block full_content %}{% endblock %}
+            </main>
+            {% endif %}
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

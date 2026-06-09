@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Vision Guard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Security Dashboard</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button type="button" class="btn btn-sm btn-outline-info">
+            <i class="bi bi-calendar3"></i> Last 24 Hours
+        </button>
+    </div>
+</div>
+
+<div class="row row-cols-1 row-cols-md-4 g-4 mb-4">
+    <div class="col">
+        <div class="card h-100 p-3">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <h6 class="text-secondary">Active Cameras</h6>
+                    <h3 class="mb-0">{{ active_cameras }} / {{ total_cameras }}</h3>
+                </div>
+                <div class="bg-success bg-opacity-10 p-2 rounded">
+                    <i class="bi bi-camera-video text-success fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card h-100 p-3">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <h6 class="text-secondary">Detections Today</h6>
+                    <h3 class="mb-0">{{ detections_today }}</h3>
+                </div>
+                <div class="bg-info bg-opacity-10 p-2 rounded">
+                    <i class="bi bi-eye text-info fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card h-100 p-3">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <h6 class="text-secondary">Open Incidents</h6>
+                    <h3 class="mb-0">{{ active_incidents.count }}</h3>
+                </div>
+                <div class="bg-danger bg-opacity-10 p-2 rounded">
+                    <i class="bi bi-exclamation-octagon text-danger fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card h-100 p-3">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <h6 class="text-secondary">System Status</h6>
+                    <h3 class="mb-0 text-success">Healthy</h3>
+                </div>
+                <div class="bg-primary bg-opacity-10 p-2 rounded">
+                    <i class="bi bi-cpu text-primary fs-4"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header border-bottom border-secondary d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Recent Security Incidents</h5>
+                <a href="{% url 'incident_list' %}" class="btn btn-sm btn-link text-info">View All</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Incident ID</th>
+                                <th>Camera</th>
+                                <th>Time</th>
+                                <th>Risk Score</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for incident in active_incidents %}
+                            <tr>
+                                <td>#{{ incident.id }}</td>
+                                <td>{{ incident.camera.name }}</td>
+                                <td>{{ incident.start_time|timesince }} ago</td>
+                                <td>
+                                    <span class="badge {% if incident.risk_score > 70 %}bg-danger{% elif incident.risk_score > 30 %}bg-warning{% else %}bg-success{% endif %}">
+                                        {{ incident.risk_score }}
+                                    </span>
+                                </td>
+                                <td>{{ incident.status }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-secondary py-4">No active incidents</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header border-bottom border-secondary">
+                <h5 class="mb-0">Recent Detections</h5>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    {% for det in recent_detections %}
+                    <li class="list-group-item bg-transparent text-light border-secondary py-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="bi {% if det.label == 'PERSON' %}bi-person-fill{% else %}bi-car-front-fill{% endif %} text-info me-2"></i>
+                                <span>{{ det.label }} detected</span>
+                            </div>
+                            <small class="text-secondary">{{ det.timestamp|time:"H:i:s" }}</small>
+                        </div>
+                        <small class="text-secondary d-block mt-1">{{ det.camera.name }}</small>
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item bg-transparent text-center py-4 text-secondary">No recent detections</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

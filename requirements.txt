@@ -1,0 +1,10 @@
+Django==6.0.5
+djangorestframework==3.17.1
+opencv-python==4.13.0.92
+ultralytics==8.4.59
+channels==4.3.2
+channels-redis==4.3.0
+daphne==4.2.1
+redis==8.0.0
+requests==2.32.5
+python-dotenv==1.0.1

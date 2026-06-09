@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block title %}Incidents - Vision Guard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Security Incident Timeline</h1>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-dark table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Camera</th>
+                        <th>Detection Window</th>
+                        <th>Priority</th>
+                        <th>Description</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for incident in incidents %}
+                    <tr>
+                        <td>#{{ incident.id }}</td>
+                        <td>{{ incident.camera.name|default:"Unknown" }}</td>
+                        <td>{{ incident.start_time|time }} - {{ incident.end_time|time|default:"Ongoing" }}</td>
+                        <td>
+                            <span class="badge {% if incident.risk_score > 70 %}bg-danger{% elif incident.risk_score > 30 %}bg-warning{% else %}bg-success{% endif %}">
+                                {{ incident.risk_score }}
+                            </span>
+                        </td>
+                        <td>{{ incident.summary|truncatewords:10 }}</td>
+                        <td>{{ incident.status }}</td>
+                        <td>
+                            <a href="{% url 'incident_detail' incident.pk %}" class="btn btn-sm btn-outline-info">Details</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-secondary">No incidents logged yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

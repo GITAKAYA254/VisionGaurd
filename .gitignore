@@ -1,0 +1,43 @@
+# Environment and secrets
+.env
+.env.local
+.env.*
+!.env.example
+
+# Database
+db.sqlite3
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Django
+media/
+staticfiles/
+*.log
+
+# ML model weights (download locally; see README)
+models/*.pt
+models/*.onnx
+
+# IDE and OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db

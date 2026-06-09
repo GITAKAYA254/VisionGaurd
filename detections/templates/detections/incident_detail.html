@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block title %}Incident #{{ incident.id }} - Vision Guard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Incident #{{ incident.id }}</h1>
+    <a href="{% url 'incident_list' %}" class="btn btn-outline-secondary">Back to Incidents</a>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="card p-4">
+            <h5 class="mb-3">Details</h5>
+            <p><strong>Camera:</strong> {{ incident.camera.name|default:"Unknown" }}</p>
+            <p><strong>Status:</strong> {{ incident.status }}</p>
+            <p><strong>Risk Score:</strong> {{ incident.risk_score }}</p>
+            <p><strong>Started:</strong> {{ incident.start_time|date:"M d, Y H:i:s" }}</p>
+            <p><strong>Ended:</strong> {{ incident.end_time|date:"M d, Y H:i:s"|default:"Ongoing" }}</p>
+            {% if incident.summary %}
+            <p><strong>Summary:</strong> {{ incident.summary }}</p>
+            {% endif %}
+            {% if incident.ai_analysis %}
+            <p><strong>AI Analysis:</strong> {{ incident.ai_analysis }}</p>
+            {% endif %}
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card p-4">
+            <h5 class="mb-3">Lead Detection</h5>
+            {% if incident.lead_detection %}
+            <p><strong>Label:</strong> {{ incident.lead_detection.label }}</p>
+            <p><strong>Confidence:</strong> {{ incident.lead_detection.confidence|floatformat:2 }}</p>
+            <p><strong>Time:</strong> {{ incident.lead_detection.timestamp|date:"M d, Y H:i:s" }}</p>
+            {% else %}
+            <p class="text-secondary">No lead detection recorded.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

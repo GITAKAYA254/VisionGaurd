@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block title %}Estate Map - Vision Guard{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    #map { height: 600px; border-radius: 10px; border: 1px solid #334155; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Estate Security Map View</h1>
+</div>
+
+<div class="card bg-dark">
+    <div class="card-body p-2">
+        <div id="map"></div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <h5>Camera Legend</h5>
+    <div class="d-flex gap-3">
+        <span><i class="bi bi-circle-fill text-success"></i> Online</span>
+        <span><i class="bi bi-circle-fill text-secondary"></i> Offline</span>
+        <span><i class="bi bi-circle-fill text-danger"></i> Alert Active</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    {{ cameras_json|json_script:"camera-data" }}
+    <script>
+        var map = L.map('map').setView([-1.3146, 36.8837], 16);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        const cameraData = JSON.parse(document.getElementById('camera-data').textContent);
+        
+        cameraData.forEach(camera => {
+            if (camera.lat && camera.lng) {
+                L.marker([camera.lat, camera.lng])
+                    .addTo(map)
+                    .bindPopup(`<b>${camera.name}</b><br>${camera.location}<br>Status: ${camera.status}`);
+            }
+        });
+    </script>
+{% endblock %}
