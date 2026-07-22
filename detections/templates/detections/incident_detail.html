@@ -15,6 +15,7 @@
             <p><strong>Camera:</strong> {{ incident.camera.name|default:"Unknown" }}</p>
             <p><strong>Status:</strong> {{ incident.status }}</p>
             <p><strong>Risk Score:</strong> {{ incident.risk_score }}</p>
+            <p><strong>Severity:</strong> {{ incident.severity }}</p>
             <p><strong>Started:</strong> {{ incident.start_time|date:"M d, Y H:i:s" }}</p>
             <p><strong>Ended:</strong> {{ incident.end_time|date:"M d, Y H:i:s"|default:"Ongoing" }}</p>
             {% if incident.summary %}

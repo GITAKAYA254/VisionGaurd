@@ -25,6 +25,12 @@ class Detection(models.Model):
         return f"{self.label} at {self.camera.name} ({self.timestamp})"
 
 class Incident(models.Model):
+    SEVERITY_CHOICES = (
+        ('LOW', 'Low'),
+        ('MEDIUM', 'Medium'),
+        ('HIGH', 'High'),
+        ('CRITICAL', 'Critical'),
+    )
     STATUS_CHOICES = (
         ('OPEN', 'Open'),
         ('INVESTIGATING', 'Investigating'),
@@ -36,6 +42,7 @@ class Incident(models.Model):
     end_time = models.DateTimeField(blank=True, null=True)
     lead_detection = models.OneToOneField(Detection, on_delete=models.SET_NULL, null=True, related_name='incident_as_lead')
     risk_score = models.IntegerField(default=0) # 0-100
+    severity = models.CharField(max_length=10, choices=SEVERITY_CHOICES, default='LOW')
     summary = models.TextField(blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='OPEN')
     ai_analysis = models.TextField(blank=True, help_text="Guard Copilot generated summary")

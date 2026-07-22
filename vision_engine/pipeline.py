@@ -15,8 +15,13 @@ from .config import (
     RECOGNITION_CACHE_TIMEOUT,
     RECOGNITION_RETRY_INTERVAL,
     TRACK_CLEANUP_TIMEOUT,
+    TRACK_HISTORY_MAX_POSITIONS,
+    LOITERING_DWELL_SECONDS,
+    LOITERING_MOVEMENT_RADIUS,
+    BEHAVIOUR_EVENT_COOLDOWN_SECONDS,
 )
 from .detection import DetectionEngine, crop_frame
+from .behaviour import BehaviourCooldown, TrackHistory, point_in_polygon, restricted_zones_from_environment
 from . import mjpeg_server
 from .recognition import (
     generate_embedding,
@@ -37,6 +42,7 @@ class VisionGuardEngine:
         self.api_url = api_url
         base_url = api_url.split("/detections/")[0]
         self.live_stats_url = f"{base_url}/detections/api/live-stats/"
+        self.behaviour_url = f"{base_url}/detections/api/behaviour/"
         self.recognition_url = f"{base_url}/recognition/api/events/"
         self.embeddings_url = base_url
         self.api_token = api_token
@@ -59,6 +65,13 @@ class VisionGuardEngine:
         self._embeddings_loaded = False
         self._embeddings_last_refresh = 0
         self._cooldowns = {}
+        self._track_history = TrackHistory(
+            movement_radius=LOITERING_MOVEMENT_RADIUS,
+            max_positions=TRACK_HISTORY_MAX_POSITIONS,
+            cleanup_timeout=TRACK_CLEANUP_TIMEOUT,
+        )
+        self._behaviour_cooldown = BehaviourCooldown(BEHAVIOUR_EVENT_COOLDOWN_SECONDS)
+        self._restricted_zones = restricted_zones_from_environment()
 
     def _encode_publish(self, frame):
         if frame is None:
@@ -122,6 +135,47 @@ class VisionGuardEngine:
                 self._track_last_seen.pop(track_id, None)
                 self._active_recognition_tasks.discard(track_id)
 
+        self._track_history.cleanup(now)
+        self._behaviour_cooldown.cleanup(now)
+
+    def _evaluate_behaviours(self, person_boxes, now):
+        """Evaluate track-local behaviour without blocking inference or persistence."""
+        self._track_history.cleanup(now)
+        for track_id, bbox in person_boxes:
+            if track_id is None:
+                continue
+
+            state = self._track_history.update(track_id, bbox, now)
+            if state.dwell_time >= LOITERING_DWELL_SECONDS:
+                cooldown_key = f"loitering:{track_id}"
+                if self._behaviour_cooldown.ready(cooldown_key, now):
+                    self._api.enqueue(
+                        self.behaviour_url,
+                        {
+                            "camera_id": self.camera_id,
+                            "behaviour_type": "LOITERING",
+                            "track_id": track_id,
+                            "cooldown_seconds": BEHAVIOUR_EVENT_COOLDOWN_SECONDS,
+                        },
+                    )
+
+            position = TrackHistory.center(bbox)
+            for zone in self._restricted_zones.get(str(self.camera_id), []):
+                if not point_in_polygon(position, zone["points"]):
+                    continue
+                cooldown_key = f"restricted-zone:{track_id}:{zone['name']}"
+                if self._behaviour_cooldown.ready(cooldown_key, now):
+                    self._api.enqueue(
+                        self.behaviour_url,
+                        {
+                            "camera_id": self.camera_id,
+                            "behaviour_type": "RESTRICTED_ZONE",
+                            "track_id": track_id,
+                            "zone_name": zone["name"],
+                            "cooldown_seconds": BEHAVIOUR_EVENT_COOLDOWN_SECONDS,
+                        },
+                    )
+
     def _detection_loop(self):
         last_frame_num = -1
         while self._running:
@@ -141,6 +195,7 @@ class VisionGuardEngine:
 
                 # Keep track of active IDs and copy labels for thread-safe annotating
                 now = time.time()
+                self._evaluate_behaviours(person_boxes, now)
                 active_labels = {}
                 with self._state_lock:
                     for track_id, _ in person_boxes:

@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from .models import Detection, Incident, CameraLiveStats
+from .services.behaviour_incidents import BEHAVIOUR_LABELS, create_behaviour_incident
 from cameras.models import Camera
 from django.utils import timezone
 
@@ -190,3 +191,43 @@ class LiveStatsAPI(APIView):
             )
 
         return Response({"cameras": data})
+
+
+class BehaviourIncidentAPI(APIView):
+    """Engine endpoint for in-memory behaviour findings, with DB-side deduplication."""
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request):
+        token = request.headers.get("X-Engine-Token", "")
+        if token != settings.VISION_GUARD_ENGINE_TOKEN:
+            return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        camera_id = request.data.get("camera_id")
+        behaviour_type = request.data.get("behaviour_type")
+        track_id = request.data.get("track_id")
+        zone_name = request.data.get("zone_name", "")
+        cooldown_seconds = request.data.get("cooldown_seconds", 120)
+
+        if behaviour_type not in BEHAVIOUR_LABELS:
+            return Response({"error": "invalid behaviour_type"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            track_id = int(track_id)
+            cooldown_seconds = max(1, int(cooldown_seconds))
+        except (TypeError, ValueError):
+            return Response({"error": "track_id and cooldown_seconds must be integers"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            camera = Camera.objects.get(id=camera_id)
+        except (TypeError, ValueError):
+            return Response({"error": "invalid camera_id"}, status=status.HTTP_400_BAD_REQUEST)
+        except Camera.DoesNotExist:
+            return Response({"error": "Camera not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        incident, created = create_behaviour_incident(
+            camera=camera,
+            behaviour_type=behaviour_type,
+            track_id=track_id,
+            zone_name=str(zone_name)[:100],
+            cooldown_seconds=cooldown_seconds,
+        )
+        return Response({"status": "success", "incident_id": incident.id, "created": created})

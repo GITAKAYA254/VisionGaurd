@@ -12,5 +12,5 @@ class CameraLiveStatsAdmin(admin.ModelAdmin):
 
 @admin.register(Incident)
 class IncidentAdmin(admin.ModelAdmin):
-    list_display = ('id', 'camera', 'risk_score', 'status', 'start_time')
-    list_filter = ('status', 'camera')
+    list_display = ('id', 'camera', 'risk_score', 'severity', 'status', 'start_time')
+    list_filter = ('severity', 'status', 'camera')
