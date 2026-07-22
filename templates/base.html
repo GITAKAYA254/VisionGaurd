@@ -117,6 +117,21 @@
                             <i class="bi bi-map me-2"></i> Estate Map
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'residents' in request.path %}active{% endif %}" href="{% url 'resident_list' %}">
+                            <i class="bi bi-people me-2"></i> Residents
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'visitors' in request.path %}active{% endif %}" href="{% url 'visitor_list' %}">
+                            <i class="bi bi-person-badge me-2"></i> Visitors
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'recognition' in request.path %}active{% endif %}" href="{% url 'recognition_feed' %}">
+                            <i class="bi bi-fingerprint me-2"></i> Recognition Feed
+                        </a>
+                    </li>
                 </ul>
             </nav>
             <main class="col-md-10 ms-sm-auto col-lg-10 px-md-4 py-4">

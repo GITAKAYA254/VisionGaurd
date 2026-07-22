@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block title %}{{ resident.full_name }} - Vision Guard{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ resident.full_name }}</h1>
+    <a href="{% url 'resident_list' %}" class="btn btn-outline-secondary">Back</a>
+</div>
+<div class="row g-4">
+    <div class="col-md-4">
+        {% if resident.photo %}<img src="{{ resident.photo.url }}" class="img-fluid rounded border border-secondary" alt="{{ resident.full_name }}">{% endif %}
+    </div>
+    <div class="col-md-8">
+        <div class="card p-4">
+            <p><strong>House:</strong> {{ resident.house_number }}</p>
+            <p><strong>Phone:</strong> {{ resident.phone_number|default:"—" }}</p>
+            <p><strong>Enrollment:</strong> {{ resident.enrollment_status }}</p>
+            {% if resident.enrollment_error %}<p class="text-danger"><strong>Error:</strong> {{ resident.enrollment_error }}</p>{% endif %}
+            <p><strong>Registered:</strong> {{ resident.date_registered|date:"M d, Y H:i" }}</p>
+            <a href="{% url 'resident_edit' resident.pk %}" class="btn btn-info">Edit</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

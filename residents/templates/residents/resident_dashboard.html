@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block title %}Resident Dashboard{% endblock %}
+{% block content %}
+<h1 class="h2 mb-4">Resident Dashboard</h1>
+<div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="card p-3 text-center"><div class="text-secondary">Total</div><div class="fs-3 text-info">{{ residents|length }}</div></div></div>
+    <div class="col-md-3"><div class="card p-3 text-center"><div class="text-secondary">Enrolled</div><div class="fs-3 text-success">{% widthratio residents|length 1 1 %}</div></div></div>
+</div>
+<a href="{% url 'resident_list' %}" class="btn btn-outline-info">Manage Residents</a>
+{% endblock %}

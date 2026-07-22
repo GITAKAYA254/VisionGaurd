@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.shortcuts import render, get_object_or_404
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
@@ -54,7 +55,7 @@ def _yield_mjpeg_frame(frame_bytes):
 
 
 def _relay_engine_stream(camera_id):
-    engine_url = f"http://127.0.0.1:8050/feed/{camera_id}"
+    engine_url = f"{settings.VISION_ENGINE_URL.rstrip('/')}/feed/{camera_id}"
     # Connect quickly, but do not time out between MJPEG chunks while YOLO warms up.
     response = requests.get(engine_url, stream=True, timeout=(3, None))
     if response.status_code != 200:

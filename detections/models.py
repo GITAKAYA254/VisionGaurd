@@ -1,7 +1,5 @@
 from django.db import models
 from cameras.models import Camera
-from django.conf import settings
-import uuid
 
 class Detection(models.Model):
     LABEL_CHOICES = (
@@ -44,18 +42,6 @@ class Incident(models.Model):
 
     def __str__(self):
         return f"Incident {self.id} - {self.status} (Score: {self.risk_score})"
-
-class Visitor(models.Model):
-    visitor_uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-    first_seen = models.DateTimeField(auto_now_add=True)
-    last_seen = models.DateTimeField(auto_now=True)
-    visit_count = models.PositiveIntegerField(default=1)
-    associated_resident = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='visitors')
-    notes = models.TextField(blank=True)
-
-    def __str__(self):
-        return f"Visitor {self.visitor_uuid} ({self.visit_count} visits)"
-
 
 class CameraLiveStats(models.Model):
     camera = models.OneToOneField(Camera, on_delete=models.CASCADE, related_name="live_stats")

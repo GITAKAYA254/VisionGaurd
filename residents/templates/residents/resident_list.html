@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}Residents - Vision Guard{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Residents</h1>
+    <a href="{% url 'resident_add' %}" class="btn btn-info"><i class="bi bi-plus-lg"></i> Add Resident</a>
+</div>
+<form class="mb-3" method="get">
+    <input type="text" name="q" class="form-control bg-dark text-light border-secondary" placeholder="Search by name, house, phone..." value="{{ request.GET.q }}">
+</form>
+<div class="card p-0">
+    <table class="table table-dark table-hover mb-0">
+        <thead><tr><th>Name</th><th>House</th><th>Phone</th><th>Enrollment</th><th>Actions</th></tr></thead>
+        <tbody>
+        {% for r in residents %}
+        <tr>
+            <td>{{ r.full_name }}</td>
+            <td>{{ r.house_number }}</td>
+            <td>{{ r.phone_number|default:"—" }}</td>
+            <td><span class="badge {% if r.enrollment_status == 'ENROLLED' %}bg-success{% elif r.enrollment_status == 'FAILED' %}bg-danger{% else %}bg-warning{% endif %}">{{ r.enrollment_status }}</span></td>
+            <td>
+                <a href="{% url 'resident_detail' r.pk %}" class="btn btn-sm btn-outline-info">View</a>
+                <a href="{% url 'resident_edit' r.pk %}" class="btn btn-sm btn-outline-light">Edit</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center py-4 text-secondary">No residents registered.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

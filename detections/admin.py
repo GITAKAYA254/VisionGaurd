@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Detection, Incident, Visitor, CameraLiveStats
+from .models import Detection, Incident, CameraLiveStats
 
 @admin.register(Detection)
 class DetectionAdmin(admin.ModelAdmin):
@@ -14,7 +14,3 @@ class CameraLiveStatsAdmin(admin.ModelAdmin):
 class IncidentAdmin(admin.ModelAdmin):
     list_display = ('id', 'camera', 'risk_score', 'status', 'start_time')
     list_filter = ('status', 'camera')
-
-@admin.register(Visitor)
-class VisitorAdmin(admin.ModelAdmin):
-    list_display = ('visitor_uuid', 'visit_count', 'first_seen', 'last_seen')

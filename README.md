@@ -4,17 +4,25 @@ Vision Guard is an AI-driven surveillance platform for residential estates. It u
 
 ## Key Features
 
+**Phase 1**
 - Real-time person and vehicle detection (YOLOv8)
 - Security incident timeline with automatic grouping
 - Live monitoring dashboard with dynamic detection counts
+- Threaded vision pipeline (stream no longer blocks on inference)
 - Camera management (RTSP, HTTP, USB webcam)
-- Threat scoring and estate map view
+
+**Phase 2 — Identity-Aware Surveillance**
+- Resident registration and face enrollment (DeepFace Facenet512)
+- Face recognition with cosine similarity matching
+- Visitor intelligence with deduplication and visit tracking
+- Recognition events with 30-second cooldown
+- Resident, visitor, and recognition feed dashboards
 
 ## Tech Stack
 
 - **Backend:** Django 6, Django REST Framework
-- **AI/CV:** Python 3.10+, YOLOv8 (Ultralytics), OpenCV
-- **Database:** SQLite (dev) / MySQL (production via env vars)
+- **AI/CV:** YOLOv8, DeepFace (Facenet512), OpenCV
+- **Database:** SQLite (dev) / MySQL 8 (production via env vars)
 - **Frontend:** Django Templates, Bootstrap 5
 
 ## Setup
@@ -84,6 +92,28 @@ Add at least one active camera (Stream URL `0` for webcam), then:
 
 ```bash
 python manage.py run_vanguard
+```
+
+## Phase 2 workflow
+
+1. Register residents under **Residents** with a clear face photo
+2. Wait for enrollment status `ENROLLED`
+3. Run `run_vanguard` — recognition runs every 10th frame (configurable)
+4. View matches on **Recognition Feed** and **Visitors**
+
+### Performance tuning (`.env`)
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `DETECTION_FRAME_SKIP` | 3 | YOLO runs every Nth frame |
+| `RECOGNITION_FRAME_SKIP` | 10 | DeepFace runs every Nth frame |
+| `JPEG_QUALITY` | 80 | Stream compression |
+| `INFERENCE_IMGSZ` | 416 | YOLO input size |
+
+## Tests
+
+```bash
+python manage.py test residents visitors recognition
 ```
 
 ## Production notes

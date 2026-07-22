@@ -24,6 +24,9 @@ urlpatterns = [
     path('accounts/', include('accounts.urls')),
     path('cameras/', include('cameras.urls')),
     path('detections/', include('detections.urls')),
+    path('residents/', include('residents.urls')),
+    path('visitors/', include('visitors.urls')),
+    path('recognition/', include('recognition.urls')),
     path('', include('dashboard.urls')),
 ]
 

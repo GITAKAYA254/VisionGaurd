@@ -8,3 +8,6 @@ daphne==4.2.1
 redis==8.0.0
 requests==2.32.5
 python-dotenv==1.0.1
+deepface==0.0.93
+tf-keras==2.20.1
+mysqlclient==2.2.7

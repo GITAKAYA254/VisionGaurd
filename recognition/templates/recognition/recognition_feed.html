@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}Recognition Feed{% endblock %}
+{% block content %}
+<h1 class="h2 mb-4">Recognition Feed</h1>
+<div class="card p-0">
+    <table class="table table-dark table-hover mb-0" id="recognition-table">
+        <thead><tr><th>Time</th><th>Person</th><th>Type</th><th>Confidence</th><th>Camera</th></tr></thead>
+        <tbody>
+        {% for e in events %}
+        <tr>
+            <td>{{ e.timestamp|date:"H:i:s" }}</td>
+            <td>{{ e.person_name }}</td>
+            <td>{{ e.person_type }}</td>
+            <td>{{ e.confidence|floatformat:2 }}</td>
+            <td>{{ e.camera.name }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+(function () {
+    const url = "{% url 'recognition_events_api' %}";
+    function refresh() {
+        fetch(url, { credentials: "same-origin" })
+            .then(r => r.json())
+            .then(data => {
+                const tbody = document.querySelector("#recognition-table tbody");
+                if (!tbody || !data.events) return;
+                tbody.innerHTML = data.events.map(e => `
+                    <tr>
+                        <td>${new Date(e.timestamp).toLocaleTimeString()}</td>
+                        <td>${e.person}</td>
+                        <td>${e.person_type}</td>
+                        <td>${e.confidence.toFixed(2)}</td>
+                        <td>${e.camera}</td>
+                    </tr>`).join("");
+            }).catch(() => {});
+    }
+    setInterval(refresh, 3000);
+})();
+</script>
+{% endblock %}

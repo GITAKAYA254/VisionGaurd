@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block title %}Visitor Detail{% endblock %}
+{% block content %}
+<div class="card p-4 col-md-8 mx-auto">
+    <h2>Visitor {{ visitor.visitor_uuid }}</h2>
+    <p><strong>Visit count:</strong> {{ visitor.visit_count }}</p>
+    <p><strong>Known visitor:</strong> {{ visitor.is_known|yesno:"Yes,No" }}</p>
+    <p><strong>First seen:</strong> {{ visitor.first_seen }}</p>
+    <p><strong>Last seen:</strong> {{ visitor.last_seen }}</p>
+    <p><strong>Associated resident:</strong> {{ visitor.associated_resident.full_name|default:"—" }}</p>
+    {% if visitor.snapshot %}<img src="{{ visitor.snapshot.url }}" class="img-fluid rounded mt-3" alt="Visitor snapshot">{% endif %}
+    <a href="{% url 'visitor_list' %}" class="btn btn-outline-secondary mt-3">Back</a>
+</div>
+{% endblock %}

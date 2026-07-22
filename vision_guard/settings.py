@@ -55,8 +55,16 @@ INSTALLED_APPS = [
     "accounts",
     "cameras",
     "detections",
+    "residents",
+    "visitors",
+    "recognition",
     "dashboard",
 ]
+
+RECOGNITION_SIMILARITY_THRESHOLD = float(os.environ.get("RECOGNITION_SIMILARITY_THRESHOLD", "0.65"))
+RECOGNITION_COOLDOWN_SECONDS = int(os.environ.get("RECOGNITION_COOLDOWN_SECONDS", "30"))
+VISION_ENGINE_URL = os.environ.get('VISION_ENGINE_URL', 'http://127.0.0.1:8050')
+DJANGO_API_URL    = os.environ.get('DJANGO_API_URL', 'http://localhost:8000')
 
 if os.environ.get("USE_DAPHNE", "").lower() in ("1", "true", "yes"):
     INSTALLED_APPS.insert(0, "daphne")

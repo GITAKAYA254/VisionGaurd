@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.conf import settings
 from cameras.models import Camera
-from detection_engine import VisionGuardEngine
+from vision_engine import VisionGuardEngine
 import threading
 import time
 
@@ -15,7 +15,7 @@ class Command(BaseCommand):
             return
 
         threads = []
-        api_url = "http://localhost:8000/detections/api/log/"
+        api_url = f"{settings.DJANGO_API_URL.rstrip('/')}/detections/api/log/"
         api_token = settings.VISION_GUARD_ENGINE_TOKEN
 
         for camera in cameras:

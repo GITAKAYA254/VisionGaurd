@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}Visitors - Vision Guard{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Visitor Intelligence</h1>
+</div>
+<div class="card p-0">
+    <table class="table table-dark table-hover mb-0">
+        <thead><tr><th>UUID</th><th>Visits</th><th>Known</th><th>First Seen</th><th>Last Seen</th><th>Resident</th><th></th></tr></thead>
+        <tbody>
+        {% for v in visitors %}
+        <tr>
+            <td>{{ v.visitor_uuid|truncatechars:12 }}</td>
+            <td>{{ v.visit_count }}</td>
+            <td>{% if v.is_known %}<span class="badge bg-success">Returning</span>{% else %}<span class="badge bg-warning">New</span>{% endif %}</td>
+            <td>{{ v.first_seen|date:"M d, H:i" }}</td>
+            <td>{{ v.last_seen|date:"M d, H:i" }}</td>
+            <td>{{ v.associated_resident.full_name|default:"—" }}</td>
+            <td><a href="{% url 'visitor_detail' v.pk %}" class="btn btn-sm btn-outline-info">Details</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="text-center py-4 text-secondary">No visitors recorded yet.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

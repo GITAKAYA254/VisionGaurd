@@ -56,13 +56,34 @@
         <div class="card h-100 p-3">
             <div class="d-flex justify-content-between">
                 <div>
-                    <h6 class="text-secondary">System Status</h6>
-                    <h3 class="mb-0 text-success">Healthy</h3>
+                    <h6 class="text-secondary">Residents Enrolled</h6>
+                    <h3 class="mb-0">{{ residents_enrolled }} / {{ residents_registered }}</h3>
                 </div>
                 <div class="bg-primary bg-opacity-10 p-2 rounded">
-                    <i class="bi bi-cpu text-primary fs-4"></i>
+                    <i class="bi bi-people text-primary fs-4"></i>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<div class="row row-cols-1 row-cols-md-3 g-4 mb-4">
+    <div class="col">
+        <div class="card h-100 p-3 text-center">
+            <h6 class="text-secondary">Known Visitors</h6>
+            <h3 class="text-info">{{ known_visitors }}</h3>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card h-100 p-3 text-center">
+            <h6 class="text-secondary">Unknown Today</h6>
+            <h3 class="text-warning">{{ unknown_visitors_today }}</h3>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card h-100 p-3 text-center">
+            <h6 class="text-secondary">Returning Visitors</h6>
+            <h3 class="text-success">{{ returning_visitors }}</h3>
         </div>
     </div>
 </div>
@@ -111,6 +132,23 @@
         </div>
     </div>
     <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header border-bottom border-secondary d-flex justify-content-between">
+                <h5 class="mb-0">Recognition Feed</h5>
+                <a href="{% url 'recognition_feed' %}" class="btn btn-sm btn-link text-info">View All</a>
+            </div>
+            <ul class="list-group list-group-flush">
+                {% for rec in recent_recognitions %}
+                <li class="list-group-item bg-transparent text-light border-secondary py-2">
+                    <strong>{{ rec.person_name }}</strong>
+                    <span class="badge bg-secondary ms-1">{{ rec.person_type }}</span>
+                    <small class="text-secondary d-block">{{ rec.camera.name }} · {{ rec.timestamp|time:"H:i:s" }}</small>
+                </li>
+                {% empty %}
+                <li class="list-group-item bg-transparent text-secondary text-center py-3">No recognitions yet</li>
+                {% endfor %}
+            </ul>
+        </div>
         <div class="card">
             <div class="card-header border-bottom border-secondary">
                 <h5 class="mb-0">Recent Detections</h5>
