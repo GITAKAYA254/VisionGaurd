@@ -1,12 +1,13 @@
-from django.test import TestCase, Client
+﻿from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 from django.conf import settings
 from cameras.models import Camera
-from residents.models import Resident
+from residents.models import Resident, ResidentEmbedding
 from visitors.models import Visitor
 from recognition.models import RecognitionEvent
 from recognition.services.embedding_utils import cosine_similarity
 from recognition.services.cooldown import CooldownService
+from recognition.services.embedding_cache import EmbeddingCache
 
 User = get_user_model()
 
@@ -108,3 +109,181 @@ class RecognitionScenarioTests(TestCase):
         self.client.login(username="guard", password="pass123")
         response = self.client.get("/recognition/api/stats/")
         self.assertEqual(response.status_code, 200)
+
+
+class EmbeddingCacheMultiEmbeddingTests(TestCase):
+    """Tests for EmbeddingCache with multiple embeddings per resident (Sprint 1)."""
+    
+    def test_embedding_cache_loads_multiple_embeddings(self):
+        """Test that EmbeddingCache loads multiple embeddings per resident."""
+        resident = Resident.objects.create(
+            full_name="Multi-Embedding Resident",
+            house_number="H3",
+            enrollment_status=Resident.ENROLLMENT_ENROLLED,
+            is_active=True,
+        )
+        
+        # Create multiple embeddings
+        emb1 = ResidentEmbedding.objects.create(
+            resident=resident,
+            embedding=[1.0] + [0.0] * 511,
+            quality_score=0.95,
+            is_active=True,
+        )
+        emb2 = ResidentEmbedding.objects.create(
+            resident=resident,
+            embedding=[0.9] + [0.1] * 511,
+            quality_score=0.88,
+            is_active=True,
+        )
+        
+        # Get cache
+        cache = EmbeddingCache.get_residents()
+        
+        # Should have 2 entries for this one resident
+        resident_entries = [e for e in cache if e["id"] == str(resident.id)]
+        self.assertEqual(len(resident_entries), 2)
+        
+        # Verify embeddings are different
+        embeddings = [e["embedding"] for e in resident_entries]
+        self.assertNotEqual(embeddings[0], embeddings[1])
+    
+    def test_embedding_cache_backward_compatible_single_embedding(self):
+        """Test that single legacy embeddings still work."""
+        resident = Resident.objects.create(
+            full_name="Legacy Single Embedding",
+            house_number="H4",
+            face_embedding=[0.5] * 512,
+            enrollment_status=Resident.ENROLLMENT_ENROLLED,
+            is_active=True,
+        )
+        
+        cache = EmbeddingCache.get_residents()
+        
+        # Should load the legacy embedding
+        resident_entries = [e for e in cache if e["id"] == str(resident.id)]
+        self.assertEqual(len(resident_entries), 1)
+        self.assertEqual(resident_entries[0]["embedding"], [0.5] * 512)
+    
+    def test_embedding_cache_ignores_inactive_embeddings(self):
+        """Test that inactive embeddings are not returned."""
+        resident = Resident.objects.create(
+            full_name="Inactive Embedding Test",
+            house_number="H5",
+            enrollment_status=Resident.ENROLLMENT_ENROLLED,
+            is_active=True,
+        )
+        
+        # Create active embedding
+        active = ResidentEmbedding.objects.create(
+            resident=resident,
+            embedding=[1.0] + [0.0] * 511,
+            is_active=True,
+        )
+        
+        # Create inactive embedding
+        inactive = ResidentEmbedding.objects.create(
+            resident=resident,
+            embedding=[0.0] * 512,
+            is_active=False,
+        )
+        
+        cache = EmbeddingCache.get_residents()
+        resident_entries = [e for e in cache if e["id"] == str(resident.id)]
+        
+        # Should only have 1 (the active one)
+        self.assertEqual(len(resident_entries), 1)
+        self.assertEqual(resident_entries[0]["embedding"], [1.0] + [0.0] * 511)
+    
+    def test_embedding_cache_includes_quality_score(self):
+        """Test that quality scores are included in cache."""
+        resident = Resident.objects.create(
+            full_name="Quality Score Test",
+            house_number="H6",
+            enrollment_status=Resident.ENROLLMENT_ENROLLED,
+            is_active=True,
+        )
+        
+        ResidentEmbedding.objects.create(
+            resident=resident,
+            embedding=[0.5] * 512,
+            quality_score=0.93,
+            is_active=True,
+        )
+        
+        cache = EmbeddingCache.get_residents()
+        resident_entries = [e for e in cache if e["id"] == str(resident.id)]
+        
+        self.assertEqual(resident_entries[0]["quality_score"], 0.93)
+    
+    def test_api_payload_includes_multiple_embeddings(self):
+        """Test that API payload correctly serializes multiple embeddings."""
+        resident = Resident.objects.create(
+            full_name="API Payload Test",
+            house_number="H7",
+            enrollment_status=Resident.ENROLLMENT_ENROLLED,
+            is_active=True,
+        )
+        
+        ResidentEmbedding.objects.create(
+            resident=resident,
+            embedding=[1.0] + [0.0] * 511,
+            is_active=True,
+        )
+        ResidentEmbedding.objects.create(
+            resident=resident,
+            embedding=[0.9] + [0.1] * 511,
+            is_active=True,
+        )
+        
+        payload = EmbeddingCache.as_api_payload()
+        
+        # Verify payload structure
+        self.assertIn("residents", payload)
+        self.assertIn("visitors", payload)
+        
+        # Verify resident embeddings
+        resident_entries = [e for e in payload["residents"] if e["id"] == str(resident.id)]
+        self.assertEqual(len(resident_entries), 2)
+    
+    def test_embedding_cache_excludes_inactive_residents(self):
+        """Test that inactive residents are not included."""
+        inactive_resident = Resident.objects.create(
+            full_name="Inactive Resident",
+            house_number="H8",
+            enrollment_status=Resident.ENROLLMENT_ENROLLED,
+            is_active=False,
+        )
+        
+        ResidentEmbedding.objects.create(
+            resident=inactive_resident,
+            embedding=[0.5] * 512,
+            is_active=True,
+        )
+        
+        cache = EmbeddingCache.get_residents()
+        
+        # Should not include inactive resident
+        resident_ids = [e["id"] for e in cache]
+        self.assertNotIn(str(inactive_resident.id), resident_ids)
+    
+    def test_embedding_cache_excludes_non_enrolled_residents(self):
+        """Test that non-enrolled residents are not included."""
+        pending_resident = Resident.objects.create(
+            full_name="Pending Resident",
+            house_number="H9",
+            enrollment_status=Resident.ENROLLMENT_PENDING,
+            is_active=True,
+        )
+        
+        ResidentEmbedding.objects.create(
+            resident=pending_resident,
+            embedding=[0.5] * 512,
+            is_active=True,
+        )
+        
+        cache = EmbeddingCache.get_residents()
+        
+        # Should not include non-enrolled resident
+        resident_ids = [e["id"] for e in cache]
+        self.assertNotIn(str(pending_resident.id), resident_ids)

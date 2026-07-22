@@ -1,22 +1,66 @@
-from residents.models import Resident
+from django.db.models import Prefetch
+
+from residents.models import Resident, ResidentEmbedding
 from visitors.models import Visitor
 
 
 class EmbeddingCache:
     @staticmethod
     def get_residents():
-        return [
-            {
-                "id": str(r.id),
-                "name": r.full_name,
-                "embedding": r.face_embedding,
-                "type": "RESIDENT",
-            }
-            for r in Resident.objects.filter(
+        """
+        Load resident embeddings from ResidentEmbedding table.
+        Falls back to Resident.face_embedding for backward compatibility.
+        Returns one entry per active embedding.
+        """
+        results = []
+
+        residents = (
+            Resident.objects.filter(
                 is_active=True,
                 enrollment_status=Resident.ENROLLMENT_ENROLLED,
-            ).exclude(face_embedding=[])
-        ]
+            ).prefetch_related(
+                Prefetch(
+                    "embeddings",
+                    queryset=ResidentEmbedding.objects.filter(
+                        is_active=True
+                    ).order_by("-created_at"),
+                )
+            )
+        )
+
+        for resident in residents:
+            # Uses the prefetched data (no extra database queries)
+            active_embeddings = list(resident.embeddings.all())
+
+            if active_embeddings:
+                # New multi-embedding system
+                for embedding_record in active_embeddings:
+                    if embedding_record.embedding:
+                        results.append(
+                            {
+                                "id": str(resident.id),
+                                "embedding_id": str(embedding_record.id),
+                                "name": resident.full_name,
+                                "embedding": embedding_record.embedding,
+                                "quality_score": embedding_record.quality_score,
+                                "type": "RESIDENT",
+                            }
+                        )
+            else:
+                # Backward compatibility with legacy single embedding
+                if resident.face_embedding:
+                    results.append(
+                        {
+                            "id": str(resident.id),
+                            "embedding_id": None,
+                            "name": resident.full_name,
+                            "embedding": resident.face_embedding,
+                            "quality_score": None,
+                            "type": "RESIDENT",
+                        }
+                    )
+
+        return results
 
     @staticmethod
     def get_visitors():

@@ -28,3 +28,18 @@ class Resident(models.Model):
 
     def __str__(self):
         return f"{self.full_name} ({self.house_number})"
+
+
+class ResidentEmbedding(models.Model):
+    resident = models.ForeignKey(Resident, on_delete=models.CASCADE, related_name="embeddings")
+    embedding = models.JSONField(default=list, blank=True)
+    quality_score = models.FloatField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["resident", "is_active"])]
+
+    def __str__(self):
+        return f"Embedding for {self.resident.full_name} ({self.created_at})"
