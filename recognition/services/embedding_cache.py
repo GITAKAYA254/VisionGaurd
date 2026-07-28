@@ -1,4 +1,4 @@
-from django.db.models import Prefetch
+from django.db.models import Count, Prefetch
 
 from residents.models import Resident, ResidentEmbedding
 from visitors.models import Visitor
@@ -18,6 +18,8 @@ class EmbeddingCache:
             Resident.objects.filter(
                 is_active=True,
                 enrollment_status=Resident.ENROLLMENT_ENROLLED,
+            ).annotate(
+                total_embeddings=Count("embeddings"),
             ).prefetch_related(
                 Prefetch(
                     "embeddings",
@@ -46,8 +48,9 @@ class EmbeddingCache:
                                 "type": "RESIDENT",
                             }
                         )
-            else:
-                # Backward compatibility with legacy single embedding
+            elif resident.total_embeddings == 0:
+                # Only fall back if this resident has never had a
+                # ResidentEmbedding row created (i.e. pre-migration).
                 if resident.face_embedding:
                     results.append(
                         {
@@ -61,6 +64,9 @@ class EmbeddingCache:
                     )
 
         return results
+                
+
+       
 
     @staticmethod
     def get_visitors():

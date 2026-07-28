@@ -8,5 +8,7 @@ urlpatterns = [
     path("<int:pk>/", views.ResidentDetailView.as_view(), name="resident_detail"),
     path("<int:pk>/edit/", views.ResidentUpdateView.as_view(), name="resident_edit"),
     path("<int:pk>/delete/", views.ResidentDeleteView.as_view(), name="resident_delete"),
+    path("<int:pk>/enhance-face/", views.enhance_face_view, name="resident_enhance_face"),
     path("api/<int:pk>/re-enroll/", views.ReEnrollAPI.as_view(), name="resident_re_enroll"),
+    path("api/<int:pk>/enhance-face/", views.EnhanceFaceAPI.as_view(), name="resident_enhance_face_api"),
 ]

@@ -1,0 +1,297 @@
+{% extends 'base.html' %} {% block title %} Enhance Face Recognition - {{
+resident.full_name }} {% endblock %} {% block content %}
+
+<div class="container mt-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <h2 class="mb-3">Enhance Face Recognition</h2>
+
+      <p class="text-muted">
+        Capture multiple images to improve recognition accuracy for
+        <strong>{{ resident.full_name }}</strong>.
+      </p>
+
+      <div id="status-message" style="display: none"></div>
+
+      <div class="card mb-4">
+        <div class="card-header">Webcam</div>
+
+        <div class="card-body">
+          <div
+            style="
+              position: relative;
+              background: #000;
+              border-radius: 8px;
+              overflow: hidden;
+            "
+          >
+            <video
+              id="webcam"
+              autoplay
+              playsinline
+              style="width: 100%; max-height: 450px"
+            ></video>
+
+            <div
+              id="loading-overlay"
+              style="
+                display: none;
+                position: absolute;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.5);
+                justify-content: center;
+                align-items: center;
+              "
+            >
+              <div class="spinner-border text-light"></div>
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <div class="d-flex justify-content-between">
+              <small>
+                Captured
+                <span id="capture-count">0</span>
+                / 5
+              </small>
+
+              <small> Automatic capture every second </small>
+            </div>
+
+            <div class="progress mt-2">
+              <div
+                id="progress-bar"
+                class="progress-bar"
+                style="width: 0%"
+              ></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <button id="start-btn" class="btn btn-success" onclick="startCapture()">
+          Start Capture
+        </button>
+
+        <button
+          id="stop-btn"
+          class="btn btn-warning"
+          onclick="stopCapture()"
+          style="display: none"
+        >
+          Stop
+        </button>
+
+        <a
+          href="{% url 'resident_detail' resident.pk %}"
+          class="btn btn-secondary"
+        >
+          Cancel
+        </a>
+      </div>
+
+      <div id="captured-images" style="display: none">
+        <div class="card">
+          <div class="card-header">Captured Images</div>
+
+          <div class="card-body">
+            <div id="images-grid" class="row g-2"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const CAPTURE_COUNT = 5;
+  const CAPTURE_INTERVAL = 1000;
+
+  let capturedImages = [];
+  let isCapturing = false;
+  let captureTimer = null;
+  let streamTrack = null;
+
+  const residentId = Number("{{ resident.pk }}");
+  const residentDetailUrl = "{% url 'resident_detail' resident.pk %}";
+
+  async function startCapture() {
+    capturedImages = [];
+    isCapturing = true;
+
+    document.getElementById("images-grid").innerHTML = "";
+    document.getElementById("captured-images").style.display = "none";
+    document.getElementById("capture-count").textContent = "0";
+    document.getElementById("progress-bar").style.width = "0%";
+
+    document.getElementById("start-btn").style.display = "none";
+    document.getElementById("stop-btn").style.display = "inline-block";
+
+    try {
+      document.getElementById("loading-overlay").style.display = "flex";
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+      });
+
+      const video = document.getElementById("webcam");
+      video.srcObject = stream;
+
+      streamTrack = stream.getVideoTracks()[0];
+
+      document.getElementById("loading-overlay").style.display = "none";
+
+      let count = 0;
+
+      captureTimer = setInterval(() => {
+        if (!isCapturing) return;
+
+        captureFrame(video);
+
+        count++;
+
+        updateProgress(count);
+
+        if (count >= CAPTURE_COUNT) {
+          clearInterval(captureTimer);
+
+          stopCapture();
+
+          submitCaptures();
+        }
+      }, CAPTURE_INTERVAL);
+    } catch (err) {
+      showError(err.message);
+
+      stopCapture();
+    }
+  }
+
+  function captureFrame(video) {
+    const canvas = document.createElement("canvas");
+
+    canvas.width = video.videoWidth;
+
+    canvas.height = video.videoHeight;
+
+    canvas.getContext("2d").drawImage(video, 0, 0);
+
+    const image = canvas.toDataURL("image/jpeg").split(",")[1];
+
+    capturedImages.push(image);
+
+    document.getElementById("captured-images").style.display = "block";
+
+    const col = document.createElement("div");
+
+    col.className = "col-2";
+
+    col.innerHTML = `<img src="data:image/jpeg;base64,${image}" class="img-fluid rounded border">`;
+
+    document.getElementById("images-grid").appendChild(col);
+  }
+
+  function updateProgress(count) {
+    document.getElementById("capture-count").textContent = count;
+
+    document.getElementById("progress-bar").style.width =
+      (count / CAPTURE_COUNT) * 100 + "%";
+  }
+
+  function stopCapture() {
+    isCapturing = false;
+
+    if (captureTimer) {
+      clearInterval(captureTimer);
+
+      captureTimer = null;
+    }
+
+    if (streamTrack) {
+      streamTrack.stop();
+
+      streamTrack = null;
+    }
+
+    const video = document.getElementById("webcam");
+
+    if (video.srcObject) {
+      video.srcObject.getTracks().forEach((track) => track.stop());
+
+      video.srcObject = null;
+    }
+
+    document.getElementById("start-btn").style.display = "inline-block";
+
+    document.getElementById("stop-btn").style.display = "none";
+  }
+
+  function submitCaptures() {
+    if (capturedImages.length === 0) {
+      showError("No images captured");
+
+      return;
+    }
+
+    showInfo("Uploading images...");
+
+    fetch(`/residents/api/${residentId}/enhance-face/`, {
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCSRFToken(),
+      },
+
+      body: JSON.stringify({
+        images: capturedImages,
+      }),
+    })
+      .then((r) => r.json())
+
+      .then((data) => {
+        if (data.success) {
+          showSuccess(`Created ${data.embeddings_created} embeddings`);
+
+          setTimeout(() => {
+            location.href = residentDetailUrl;
+          }, 1500);
+        } else {
+          showError(data.message || data.error || "Upload failed");
+        }
+      })
+
+      .catch((e) => showError(e.message));
+  }
+
+  function showMessage(type, message) {
+    const box = document.getElementById("status-message");
+
+    box.style.display = "block";
+
+    box.className = `alert alert-${type}`;
+
+    box.innerHTML = message;
+  }
+
+  function showError(m) {
+    showMessage("danger", m);
+  }
+  function showSuccess(m) {
+    showMessage("success", m);
+  }
+  function showInfo(m) {
+    showMessage("info", m);
+  }
+
+  function getCSRFToken() {
+    const cookie = document.cookie
+      .split("; ")
+      .find((c) => c.startsWith("csrftoken="));
+
+    return cookie ? cookie.split("=")[1] : "";
+  }
+</script>
+
+{% endblock %}

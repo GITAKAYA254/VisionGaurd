@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
 from django.db.models import Q
+from django.shortcuts import render, get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -10,6 +11,7 @@ from rest_framework import status
 from .models import Resident
 from .forms import ResidentForm
 from .services.face_enrollment import FaceEnrollmentService
+from .services.face_enhancement import FaceEnhancementService
 
 
 class ResidentListView(LoginRequiredMixin, ListView):
@@ -33,6 +35,12 @@ class ResidentListView(LoginRequiredMixin, ListView):
 class ResidentDetailView(LoginRequiredMixin, DetailView):
     model = Resident
     template_name = "residents/resident_detail.html"
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        resident = self.object
+        context['embedding_count'] = FaceEnhancementService.get_embedding_count(resident)
+        return context
 
 
 class ResidentCreateView(LoginRequiredMixin, CreateView):
@@ -71,6 +79,13 @@ def resident_dashboard(request):
     )(request)
 
 
+@login_required
+def enhance_face_view(request, pk):
+    """Display webcam capture page for enhancing resident face."""
+    resident = get_object_or_404(Resident, pk=pk)
+    return render(request, 'residents/enhance_face.html', {'resident': resident})
+
+
 class ReEnrollAPI(APIView):
     def post(self, request, pk):
         if not request.user.is_authenticated or request.user.role != "ADMIN":
@@ -81,3 +96,53 @@ class ReEnrollAPI(APIView):
             return Response({"error": "Not found"}, status=status.HTTP_404_NOT_FOUND)
         FaceEnrollmentService.enroll(resident)
         return Response({"status": resident.enrollment_status, "error": resident.enrollment_error})
+
+
+class EnhanceFaceAPI(APIView):
+    """
+    API endpoint for enhancing resident face recognition with multiple webcam captures.
+    POST /residents/<resident_id>/enhance-face/
+    Body: {"images": ["base64_image_1", "base64_image_2", ...]}
+    """
+    
+    def post(self, request, pk):
+        if not request.user.is_authenticated:
+            return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        try:
+            resident = Resident.objects.get(pk=pk)
+        except Resident.DoesNotExist:
+            return Response({"error": "Resident not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Get base64 images from request
+        images = request.data.get("images", [])
+        
+        if not images:
+            return Response(
+                {"error": "No images provided"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not isinstance(images, list):
+            return Response(
+                {"error": "Images must be a list"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        MAX_IMAGES = 10
+        if not all(isinstance(image, str) for image in images):
+            return Response(
+                {"error": "Each image must be a base64 string"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if len(images) > MAX_IMAGES:
+            return Response(
+                {"error": f"Too many images (max {MAX_IMAGES})"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Process the images
+        result = FaceEnhancementService.process_webcam_captures(resident, images)
+        
+        return Response(result, status=status.HTTP_200_OK)
