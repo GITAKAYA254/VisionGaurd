@@ -1,4 +1,4 @@
-﻿from django.test import TestCase, Client
+from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 from django.conf import settings
 from cameras.models import Camera
@@ -287,3 +287,65 @@ class EmbeddingCacheMultiEmbeddingTests(TestCase):
         # Should not include non-enrolled resident
         resident_ids = [e["id"] for e in cache]
         self.assertNotIn(str(pending_resident.id), resident_ids)
+
+
+class MatchEmbeddingPrioritizationTests(TestCase):
+    def test_resident_prioritized_over_higher_scoring_visitor(self):
+        """
+        Verify that if a resident score meets threshold (e.g. 0.85 >= 0.65),
+        RESIDENT is immediately returned without checking visitors, even if a visitor
+        has a higher score (e.g. 0.95).
+        """
+        from vision_engine.recognition import match_embedding
+
+        target_emb = [1.0, 0.0, 0.0]
+        residents = [
+            {"id": "1", "name": "John", "embedding": [0.70, 0.714, 0.0], "type": "RESIDENT"}, # score 0.70
+            {"id": "1", "name": "John", "embedding": [0.85, 0.5267, 0.0], "type": "RESIDENT"}, # score 0.85
+        ]
+        visitors = [
+            {"id": "22", "name": "Visitor 22", "embedding": [0.98, 0.199, 0.0], "type": "VISITOR"} # score 0.98
+        ]
+
+        person_type, match_dict, score = match_embedding(target_emb, residents, visitors, threshold=0.65)
+        self.assertEqual(person_type, "RESIDENT")
+        self.assertEqual(match_dict["id"], "1")
+        self.assertAlmostEqual(score, 0.85, places=2)
+
+    def test_multi_embedding_resident_grouping(self):
+        """
+        Verify that multiple embeddings for the same resident are grouped by resident ID
+        and that the highest score for each resident is selected.
+        """
+        from vision_engine.recognition import match_embedding
+
+        target = [1.0, 0.0, 0.0]
+        residents = [
+            {"id": "1", "name": "John", "embedding": [0.80, 0.60, 0.0], "type": "RESIDENT"}, # score 0.80
+            {"id": "1", "name": "John", "embedding": [0.95, 0.3122, 0.0], "type": "RESIDENT"}, # score 0.95
+            {"id": "2", "name": "Mary", "embedding": [0.88, 0.475, 0.0], "type": "RESIDENT"}, # score 0.88
+        ]
+        visitors = []
+
+        person_type, match_dict, score = match_embedding(target, residents, visitors, threshold=0.65)
+        self.assertEqual(person_type, "RESIDENT")
+        self.assertEqual(match_dict["id"], "1")
+        self.assertAlmostEqual(score, 0.95, places=2)
+
+    def test_fallback_to_visitor_when_no_resident_satisfies_threshold(self):
+        from vision_engine.recognition import match_embedding
+
+        target = [1.0, 0.0, 0.0]
+        residents = [
+            {"id": "1", "name": "John", "embedding": [0.50, 0.866, 0.0], "type": "RESIDENT"} # score 0.50
+        ]
+        visitors = [
+            {"id": "22", "name": "Visitor 22", "embedding": [0.82, 0.5724, 0.0], "type": "VISITOR"} # score 0.82
+        ]
+
+        person_type, match_dict, score = match_embedding(target, residents, visitors, threshold=0.65)
+        self.assertEqual(person_type, "VISITOR")
+        self.assertEqual(match_dict["id"], "22")
+        self.assertAlmostEqual(score, 0.82, places=2)
+
+

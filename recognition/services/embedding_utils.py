@@ -13,12 +13,25 @@ def cosine_similarity(a, b):
 def best_match(embedding, entries):
     best = None
     best_score = 0.0
+    scores_by_id = {}
+
     for entry in entries:
         emb = entry.get("embedding")
         if not emb:
             continue
         score = cosine_similarity(embedding, emb)
-        if score > best_score:
+        entity_id = entry.get("id")
+        if entity_id:
+            if entity_id not in scores_by_id or score > scores_by_id[entity_id][0]:
+                scores_by_id[entity_id] = (score, entry)
+        elif score > best_score:
             best_score = score
             best = entry
+
+    if scores_by_id:
+        for score, entry in scores_by_id.values():
+            if score > best_score:
+                best_score = score
+                best = entry
+
     return best, best_score

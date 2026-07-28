@@ -57,27 +57,75 @@ def generate_embedding(image_bgr):
         return None
 
 
-def match_embedding(embedding, residents, visitors, threshold=None):
+def match_embedding(
+    embedding,
+    residents,
+    visitors,
+    threshold=None,
+    resident_threshold=None,
+    visitor_threshold=None,
+):
     """
     Match against resident and visitor embedding lists.
     residents/visitors: list of dicts with id, name, embedding, type
-  Returns: (person_type, match_dict, confidence)
+    Returns: (person_type, match_dict, confidence)
     """
-    threshold = threshold or RECOGNITION_SIMILARITY_THRESHOLD
-    best = None
-    best_score = 0.0
+    res_thresh = resident_threshold or threshold or RECOGNITION_SIMILARITY_THRESHOLD
+    vis_thresh = visitor_threshold or threshold or RECOGNITION_SIMILARITY_THRESHOLD
 
-    for entry in residents + visitors:
-        if not entry.get("embedding"):
+    best_res_entry = None
+    best_res_score = 0.0
+    res_scores_by_id = {}
+
+    for entry in residents:
+        emb = entry.get("embedding")
+        if not emb:
             continue
-        score = cosine_similarity(embedding, entry["embedding"])
-        if score > best_score:
-            best_score = score
-            best = entry
+        score = cosine_similarity(embedding, emb)
+        res_id = entry.get("id")
+        if res_id:
+            if res_id not in res_scores_by_id or score > res_scores_by_id[res_id][0]:
+                res_scores_by_id[res_id] = (score, entry)
+        elif score > best_res_score:
+            best_res_score = score
+            best_res_entry = entry
 
-    if best and best_score >= threshold:
-        return best["type"], best, best_score
-    return "UNKNOWN", None, best_score
+    if res_scores_by_id:
+        for score, entry in res_scores_by_id.values():
+            if score > best_res_score:
+                best_res_score = score
+                best_res_entry = entry
+
+    if best_res_entry and best_res_score >= res_thresh:
+        return "RESIDENT", best_res_entry, best_res_score
+
+    best_vis_entry = None
+    best_vis_score = 0.0
+    vis_scores_by_id = {}
+
+    for entry in visitors:
+        emb = entry.get("embedding")
+        if not emb:
+            continue
+        score = cosine_similarity(embedding, emb)
+        vis_id = entry.get("id")
+        if vis_id:
+            if vis_id not in vis_scores_by_id or score > vis_scores_by_id[vis_id][0]:
+                vis_scores_by_id[vis_id] = (score, entry)
+        elif score > best_vis_score:
+            best_vis_score = score
+            best_vis_entry = entry
+
+    if vis_scores_by_id:
+        for score, entry in vis_scores_by_id.values():
+            if score > best_vis_score:
+                best_vis_score = score
+                best_vis_entry = entry
+
+    if best_vis_entry and best_vis_score >= vis_thresh:
+        return "VISITOR", best_vis_entry, best_vis_score
+
+    return "UNKNOWN", None, max(best_res_score, best_vis_score)
 
 
 def fetch_embeddings_from_api(base_url, api_token):
