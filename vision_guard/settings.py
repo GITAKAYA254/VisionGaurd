@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     "visitors",
     "recognition",
     "dashboard",
+    "notifications",
 ]
 
 RECOGNITION_SIMILARITY_THRESHOLD = float(os.environ.get("RECOGNITION_SIMILARITY_THRESHOLD", "0.65"))

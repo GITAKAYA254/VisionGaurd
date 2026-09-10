@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}{{ notification.title }} - Incident Detail{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'notification_list' %}" class="btn btn-outline-secondary btn-sm mb-3">
+        <i class="bi bi-arrow-left me-1"></i> Back to Notifications
+    </a>
+
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <h2 class="fw-bold mb-0">{{ notification.title }}</h2>
+                {% if notification.severity == 'INFO' %}
+                    <span class="badge bg-info text-dark fs-6">INFO</span>
+                {% elif notification.severity == 'WARNING' %}
+                    <span class="badge bg-warning text-dark fs-6">WARNING</span>
+                {% elif notification.severity == 'HIGH' %}
+                    <span class="badge bg-danger fs-6">HIGH</span>
+                {% endif %}
+            </div>
+            <p class="text-muted mb-0">
+                <i class="bi bi-camera-video me-1"></i>
+                {% if notification.camera %}{{ notification.camera.name }} ({{ notification.camera.location_name }}){% else %}Front Door{% endif %}
+                &bull;
+                <i class="bi bi-clock me-1"></i>
+                {{ notification.created_at|date:"M d, Y - H:i:s" }}
+            </p>
+        </div>
+
+        <div class="d-flex gap-2">
+            <a href="{% url 'notification_view_live' notification.pk %}" class="btn btn-primary px-4 fw-bold">
+                <i class="bi bi-broadcast me-1"></i> View Live
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Large Snapshot Container (500–700px responsive card) -->
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm overflow-hidden bg-dark">
+            <div class="card-header bg-secondary bg-opacity-25 border-bottom border-secondary text-light fw-semibold">
+                <i class="bi bi-camera me-2 text-info"></i> Security Snapshot
+            </div>
+            <div class="card-body p-0 text-center bg-black d-flex align-items-center justify-content-center" style="min-height: 350px;">
+                {% if notification.snapshot %}
+                    <img src="{{ notification.snapshot.url }}" alt="Snapshot" class="img-fluid rounded-bottom" style="max-height: 550px; width: 100%; object-fit: contain;">
+                {% else %}
+                    <div class="py-5 text-muted">
+                        <i class="bi bi-image-fill display-1 d-block mb-3 text-secondary"></i>
+                        <h5>No snapshot available</h5>
+                        <p class="small text-secondary mb-0">Frame data was not attached to this alert.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Metadata Incident Report Breakdown -->
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm bg-dark">
+            <div class="card-header bg-secondary bg-opacity-25 border-bottom border-secondary text-light fw-semibold">
+                <i class="bi bi-file-earmark-text me-2 text-info"></i> Incident Summary
+            </div>
+            <div class="card-body p-4">
+                <div class="mb-4">
+                    <h6 class="text-secondary text-uppercase fs-7 fw-bold mb-2">Message</h6>
+                    <p class="fs-5 text-light mb-0">{{ notification.message }}</p>
+                </div>
+
+                <hr class="border-secondary my-3">
+
+                <h6 class="text-secondary text-uppercase fs-7 fw-bold mb-3">Event Parameters</h6>
+
+                <ul class="list-group list-group-flush bg-transparent">
+                    <li class="list-group-item bg-transparent text-light px-0 d-flex justify-content-between">
+                        <span class="text-muted"><i class="bi bi-clock me-2"></i>Detection Time</span>
+                        <span class="fw-semibold">{{ notification.created_at|date:"H:i:s" }}</span>
+                    </li>
+
+                    <li class="list-group-item bg-transparent text-light px-0 d-flex justify-content-between">
+                        <span class="text-muted"><i class="bi bi-camera-video me-2"></i>Camera Location</span>
+                        <span class="fw-semibold">{% if notification.camera %}{{ notification.camera.name }}{% else %}Front Door{% endif %}</span>
+                    </li>
+
+                    {% if notification.metadata.track_id %}
+                    <li class="list-group-item bg-transparent text-light px-0 d-flex justify-content-between">
+                        <span class="text-muted"><i class="bi bi-person-bounding-box me-2"></i>Track ID</span>
+                        <span class="badge bg-secondary">#{{ notification.metadata.track_id }}</span>
+                    </li>
+                    {% endif %}
+
+                    {% if notification.metadata.resident_name %}
+                    <li class="list-group-item bg-transparent text-light px-0 d-flex justify-content-between">
+                        <span class="text-muted"><i class="bi bi-person-check me-2"></i>Resident Name</span>
+                        <span class="text-info fw-bold">{{ notification.metadata.resident_name }}</span>
+                    </li>
+                    {% endif %}
+
+                    {% if notification.metadata.event_type == 'LOITERING' %}
+                    <li class="list-group-item bg-transparent text-light px-0 d-flex justify-content-between">
+                        <span class="text-muted"><i class="bi bi-hourglass-split me-2"></i>Loitering Duration</span>
+                        <span class="text-warning fw-semibold">2+ minutes (Continuous)</span>
+                    </li>
+                    <li class="list-group-item bg-transparent text-light px-0 d-flex justify-content-between">
+                        <span class="text-muted"><i class="bi bi-shield-exclamation me-2"></i>Recognition Status</span>
+                        <span class="text-danger fw-semibold">Unrecognized Person</span>
+                    </li>
+                    {% if notification.metadata.zone_name %}
+                    <li class="list-group-item bg-transparent text-light px-0 d-flex justify-content-between">
+                        <span class="text-muted"><i class="bi bi-geo-alt me-2"></i>Restricted Zone</span>
+                        <span class="text-light">{{ notification.metadata.zone_name }}</span>
+                    </li>
+                    {% endif %}
+                    {% endif %}
+
+                    {% if notification.metadata.event_type == 'UNKNOWN' %}
+                    <li class="list-group-item bg-transparent text-light px-0 d-flex justify-content-between">
+                        <span class="text-muted"><i class="bi bi-shield-slash me-2"></i>Reason</span>
+                        <span class="text-warning">Unknown Person Detected</span>
+                    </li>
+                    {% endif %}
+                </ul>
+
+                <div class="mt-4 d-grid gap-2">
+                    <a href="{% url 'notification_view_live' notification.pk %}" class="btn btn-primary fw-bold py-2">
+                        <i class="bi bi-broadcast me-2"></i> View Live Feed
+                    </a>
+                    <a href="{% url 'notification_list' %}" class="btn btn-outline-secondary py-2">
+                        <i class="bi bi-list-ul me-2"></i> Return to Notifications Archive
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -16,7 +16,7 @@ from visitors.services.visitor_tracking import VisitorTrackingService
 from .models import RecognitionEvent
 from .services.embedding_cache import EmbeddingCache
 from .services.cooldown import CooldownService
-from .services.face_recognition import FaceRecognitionService
+from notifications.services import NotificationService
 
 
 def _save_snapshot(event, snapshot_b64):
@@ -109,6 +109,24 @@ class RecognitionEventAPI(APIView):
         )
         if snapshot_b64 and not (visitor and visitor.snapshot):
             _save_snapshot(event, snapshot_b64)
+
+        if event.person_type == RecognitionEvent.PERSON_RESIDENT and resident:
+            NotificationService.notify_resident(
+                resident_name=resident.full_name,
+                camera=camera,
+                metadata={"resident_id": resident.id, "event_id": event.id},
+                snapshot_b64=snapshot_b64,
+            )
+        elif event.person_type == RecognitionEvent.PERSON_UNKNOWN:
+            track_id = request.data.get("track_id")
+            if not track_id and ":" in cooldown_key:
+                track_id = cooldown_key.split(":")[-1]
+            NotificationService.notify_unknown(
+                track_id=track_id,
+                camera=camera,
+                metadata={"cooldown_key": cooldown_key, "event_id": event.id},
+                snapshot_b64=snapshot_b64,
+            )
 
         return Response({"status": "success", "event_id": event.id})
 

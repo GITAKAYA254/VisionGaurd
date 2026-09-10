@@ -27,6 +27,7 @@ urlpatterns = [
     path('residents/', include('residents.urls')),
     path('visitors/', include('visitors.urls')),
     path('recognition/', include('recognition.urls')),
+    path('notifications/', include('notifications.urls')),
     path('', include('dashboard.urls')),
 ]
 

@@ -9,6 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from .models import Detection, Incident, CameraLiveStats
 from .services.behaviour_incidents import BEHAVIOUR_LABELS, create_behaviour_incident
 from cameras.models import Camera
+from notifications.services import NotificationService
 from django.utils import timezone
 
 PERSON_CLASS_NAMES = {"person"}
@@ -230,4 +231,16 @@ class BehaviourIncidentAPI(APIView):
             zone_name=str(zone_name)[:100],
             cooldown_seconds=cooldown_seconds,
         )
+
+        if behaviour_type == "LOITERING":
+            person_type = request.data.get("person_type")
+            snapshot_b64 = request.data.get("snapshot_b64")
+            NotificationService.notify_loitering(
+                track_id=track_id,
+                camera=camera,
+                metadata={"zone_name": zone_name, "incident_id": incident.id, "person_type": person_type},
+                snapshot_b64=snapshot_b64,
+                person_type=person_type,
+            )
+
         return Response({"status": "success", "incident_id": incident.id, "created": created})
